@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM Positional Encodings Lab | Sinusoidal Waves to RoPE</title>
+  <meta name="description" content="Interactive demo exploring LLM Positional Encodings: From Vaswani's 2017 Sinusoidal clock hands to modern Rotary Position Embeddings (RoPE) powering LLaMA 3 and 128k context.">
+  <meta name="keywords" content="Positional Encoding, RoPE, Rotary Position Embedding, Sinusoidal Encoding, Transformer, Attention Is All You Need, LLaMA 3, Context Window, NLP">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📐</text></svg>">
+</head>
+<body>
+
+  <!-- Sticky Header & Navigation -->
+  <header class="app-header">
+    <div class="container nav-wrapper">
+      <a href="#hero" class="brand-badge">
+        <div class="brand-icon">📐</div>
+        <div class="brand-titles">
+          <span class="brand-title">Positional Encodings</span>
+          <span class="brand-subtitle">Sinusoidal Waves to RoPE</span>
+        </div>
+      </a>
+      <nav class="main-nav" aria-label="Main Navigation">
+        <a href="#permutation-view" class="nav-link">Permutation Dilemma</a>
+        <a href="#sinusoidal-view" class="nav-link">Sinusoidal Clock</a>
+        <a href="#rope-view" class="nav-link">RoPE Unit Circle</a>
+        <a href="#scaling-view" class="nav-link">128k Scaling</a>
+        <a href="https://martianunlimited.github.io/llm_tokenizer/" class="nav-link" target="_blank" rel="noopener">🔤 Tokenizer</a>
+        <a href="https://martianunlimited.github.io/llm_embedding/" class="nav-link" target="_blank" rel="noopener">🧭 Embeddings</a>
+        <a href="https://martianunlimited.github.io/llm_attention/" class="nav-link" target="_blank" rel="noopener">🎯 Attention</a>
+        <a href="https://martianunlimited.github.io/llm_sampling/" class="nav-link" target="_blank" rel="noopener">🎲 Sampling</a>
+        <a href="https://github.com/martianunlimited/llm_positional" class="nav-link nav-cta" target="_blank" rel="noopener">★ GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero Section -->
+    <section id="hero" class="hero-section">
+      <div class="container">
+        <div class="hero-pill">
+          <span>🧠 Why Transformers Know Word Order</span>
+          <span>•</span>
+          <span>Vaswani (2017) to RoPE (Su et al. 2021)</span>
+          <span>•</span>
+          <span>LLaMA 3 128k Context</span>
+        </div>
+        <h1 class="hero-title">
+          How Transformers Understand Word Order: <br>
+          <span class="gradient-text">Sinusoidal Waves to Modern RoPE</span>
+        </h1>
+        <p class="hero-desc">
+          Self-Attention by itself is <strong>permutation invariant</strong>: it treats sentences like an unordered bag of words. 
+          Without positional encoding, <em>"dog bites man"</em> and <em>"man bites dog"</em> look mathematically identical to an LLM! 
+          Explore the ingenious mathematics that inject word sequence: from multi-frequency harmonic waves to 
+          <strong>Rotary Position Embeddings (RoPE)</strong> rotating vectors in 2D complex planes.
+        </p>
+
+        <!-- Quick Feature Badges -->
+        <div class="hero-highlights">
+          <div class="highlight-badge">
+            <span>🐕</span>
+            <span><strong>Bag-of-Words Dilemma:</strong> Why attention needs position injection</span>
+          </div>
+          <div class="highlight-badge">
+            <span>🕰️</span>
+            <span><strong>The Vaswani Clock:</strong> Multi-frequency sine &amp; cosine harmonics</span>
+          </div>
+          <div class="highlight-badge">
+            <span>🔄</span>
+            <span><strong>Modern RoPE:</strong> Complex plane rotations preserving vector norms</span>
+          </div>
+          <div class="highlight-badge">
+            <span>🚀</span>
+            <span><strong>128k Context:</strong> Base frequency scaling ($\theta_{\text{base}} = 500,000$)</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Visualizer 1: Permutation Invariance Dilemma -->
+    <section id="permutation-view" class="section-block">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">Visualizer 1</div>
+          <h2 class="section-title">The "Bag-of-Words" Permutation Dilemma</h2>
+          <p class="section-desc">
+            Toggle Positional Encoding ON vs. OFF to see why attention alone is blind to syntax order:
+          </p>
+        </div>
+
+        <div class="panel-card permutation-card">
+          <div class="pe-toggle-hud">
+            <span class="hud-instruction">Toggle Positional Encoding:</span>
+            <div class="toggle-group">
+              <button class="toggle-btn" id="btn-pe-off">
+                <span>❌ Positional Encoding: OFF</span>
+              </button>
+              <button class="toggle-btn active" id="btn-pe-on">
+                <span>✅ Positional Encoding: ON</span>
+              </button>
+            </div>
+            <div class="pe-status-badge" id="pe-status-text">
+              Status: Positional coordinates active. Word order syntax is preserved!
+            </div>
+          </div>
+
+          <div class="matrices-comparison-grid">
+            <!-- Sentence A: Dog bites man -->
+            <div class="matrix-box">
+              <div class="matrix-box-title">Sentence A: <span class="highlight-cyan">"Dog bites man"</span></div>
+              <p class="matrix-box-sub">Subject: Dog ➔ Action: bites ➔ Object: man</p>
+              <div class="matrix-display" id="matrix-sent-a"></div>
+            </div>
+
+            <!-- Sentence B: Man bites dog -->
+            <div class="matrix-box">
+              <div class="matrix-box-title">Sentence B: <span class="highlight-pink">"Man bites dog"</span></div>
+              <p class="matrix-box-sub">Subject: Man ➔ Action: bites ➔ Object: dog</p>
+              <div class="matrix-display" id="matrix-sent-b"></div>
+            </div>
+          </div>
+
+          <div class="permutation-callout" id="permutation-insight-box">
+            <strong>💡 Key Insight:</strong> When Positional Encoding is <strong>OFF</strong>, the attention weights between identical word tokens are symmetric and order-agnostic. The model has no way to tell whether the dog bit the man or the man bit the dog! Enabling PE assigns unique directional vectors to positions 0, 1, and 2, breaking symmetry.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Visualizer 2: Vaswani Sinusoidal Clock -->
+    <section id="sinusoidal-view" class="section-block bg-elevated">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">Visualizer 2</div>
+          <h2 class="section-title">The Vaswani Multi-Frequency Clock (2017)</h2>
+          <p class="section-desc">
+            Vaswani et al. encoded positions using continuous sine and cosine waves: 
+            $\text{PE}_{(pos, 2i)} = \sin\left(\frac{pos}{10000^{2i/d}}\right)$, $\text{PE}_{(pos, 2i+1)} = \cos\left(\frac{pos}{10000^{2i/d}}\right)$.
+          </p>
+        </div>
+
+        <div class="sinusoidal-layout-grid">
+          <!-- Left: Heatmap Canvas -->
+          <div class="panel-card canvas-card">
+            <div class="card-header-flex">
+              <h3 class="card-sub-title">Positional Encoding Matrix ($PE \in \mathbb{R}^{\text{pos} \times d}$)</h3>
+              <span class="badge-dim">Position 0..32 × Dimension 0..16</span>
+            </div>
+            <p class="card-hint">Hover or click on any column to graph that dimension's continuous wave:</p>
+            <canvas id="sinusoidal-heatmap-canvas" width="560" height="340" aria-label="Sinusoidal Heatmap"></canvas>
+            
+            <div class="heatmap-legend">
+              <span>-1.0 (Cold Sine Valley)</span>
+              <span class="legend-gradient-bar"></span>
+              <span>+1.0 (Hot Sine Peak)</span>
+            </div>
+          </div>
+
+          <!-- Right: Interactive Waveform & Clock Metaphor -->
+          <div class="panel-card wave-card">
+            <div class="card-header-flex">
+              <h3 class="card-sub-title" id="active-dim-title">Waveform: Dimension 0 (sin)</h3>
+              <span class="badge-cyan" id="active-wavelength-badge">Wavelength: 6.28 tokens</span>
+            </div>
+
+            <!-- Wave Graph Canvas -->
+            <canvas id="sinusoidal-wave-canvas" width="560" height="200" aria-label="Harmonic Wave Graph"></canvas>
+
+            <div class="clock-metaphor-box">
+              <h4 class="clock-title">🕰️ The Clock Hands Metaphor:</h4>
+              <p class="clock-desc" id="clock-desc-text">
+                <strong>Dimension 0 (Second Hand):</strong> Rapidly oscillates with period $2\pi \approx 6.28$ tokens. It tracks immediate adjacent word syntax and local grammatical order.
+              </p>
+              <div class="dimension-selector-ribbon" id="dim-selector-ribbon">
+                <!-- Dim buttons injected dynamically -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Visualizer 3: Modern Rotary Position Embedding (RoPE) -->
+    <section id="rope-view" class="section-block">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">Visualizer 3</div>
+          <h2 class="section-title">Modern RoPE: 2D Complex Unit Circle Rotations</h2>
+          <p class="section-desc">
+            Used in <strong>LLaMA 1/2/3</strong>, <strong>Mistral</strong>, <strong>Gemma</strong>, and <strong>Qwen</strong>: 
+            Instead of adding vectors, RoPE multiplies $Q$ and $K$ by 2D orthogonal rotation matrices. 
+            Because rotations preserve lengths ($\|R_m \vec{q}\| = \|\vec{q}\|$), the dot product strictly reflects relative distance!
+          </p>
+        </div>
+
+        <div class="rope-layout-grid">
+          <!-- 2D Unit Circle Canvas -->
+          <div class="panel-card rope-circle-card">
+            <div class="card-header-flex">
+              <h3 class="card-sub-title">2D Orthogonal Subspace Plane</h3>
+              <span class="badge-emerald" id="plane-badge">Plane 0 (Dims 0, 1)</span>
+            </div>
+
+            <div class="circle-canvas-wrapper">
+              <canvas id="rope-circle-canvas" width="400" height="400" aria-label="RoPE Unit Circle"></canvas>
+            </div>
+
+            <div class="circle-readouts">
+              <div class="readout-item">
+                <span>Rotation Angle ($m \cdot \theta_i$):</span>
+                <strong id="readout-angle-deg">171.9°</strong>
+              </div>
+              <div class="readout-item">
+                <span>$\cos(m\theta)$:</span>
+                <strong id="readout-cos">-0.990</strong>
+              </div>
+              <div class="readout-item">
+                <span>$\sin(m\theta)$:</span>
+                <strong id="readout-sin">+0.141</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Controls & Relative Distance Decay -->
+          <div class="panel-card rope-controls-card">
+            <h3 class="card-sub-title">Interactive RoPE Sliders</h3>
+
+            <div class="hud-block">
+              <div class="slider-header">
+                <label class="hud-label" for="slider-token-pos">Token Position ($m$):</label>
+                <span class="slider-val-badge" id="val-token-pos">3</span>
+              </div>
+              <input type="range" id="slider-token-pos" min="0" max="32" step="1" value="3" class="range-slider">
+            </div>
+
+            <div class="hud-block">
+              <div class="slider-header">
+                <label class="hud-label" for="slider-plane-idx">2D Subspace Plane (Frequency Band):</label>
+                <span class="slider-val-badge" id="val-plane-idx">Plane 0 (Fastest)</span>
+              </div>
+              <input type="range" id="slider-plane-idx" min="0" max="3" step="1" value="0" class="range-slider">
+            </div>
+
+            <!-- Relative Distance Decay Graph -->
+            <div class="decay-graph-box">
+              <div class="card-header-flex">
+                <h4 class="decay-title">Natural Recency Bias (Relative Distance Decay)</h4>
+                <span class="badge-cyan" id="decay-val-badge">$\cos(\Delta\theta) = 0.540$</span>
+              </div>
+              <p class="decay-desc">
+                As relative distance $\Delta = m - n$ increases, vectors rotate out of alignment, creating an inherent recency bias:
+              </p>
+              <canvas id="rope-decay-canvas" width="500" height="150" aria-label="Distance Decay Graph"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Visualizer 4: 128k Long-Context Scaling -->
+    <section id="scaling-view" class="section-block bg-elevated">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">Visualizer 4</div>
+          <h2 class="section-title">LLaMA 3 Context Extension: Base 10,000 vs. 500,000</h2>
+          <p class="section-desc">
+            Why scaling the RoPE base frequency unlocks <strong>128,000-token context windows</strong> without retraining:
+          </p>
+        </div>
+
+        <div class="scaling-cards-grid">
+          <!-- Standard LLaMA 1/2 -->
+          <div class="panel-card scaling-card">
+            <div class="scaling-badge badge-warning">LLaMA 1 &amp; 2 Standard</div>
+            <h3 class="scaling-title">Base $\theta_{\text{base}} = 10,000$ (4k Context)</h3>
+            <p class="scaling-desc">
+              High rotation speeds cause token vectors at positions $> 4,096$ to wrap around the unit circle multiple times, 
+              causing catastrophic out-of-distribution confusion.
+            </p>
+            <div class="canvas-mini-wrapper">
+              <canvas id="canvas-base-10k" width="280" height="280" aria-label="RoPE Base 10k"></canvas>
+            </div>
+            <div class="scaling-stat">
+              <span>Full Rotations at pos 32k:</span>
+              <strong class="text-red">~5.1 Full Circles</strong>
+            </div>
+          </div>
+
+          <!-- LLaMA 3 Extended -->
+          <div class="panel-card scaling-card highlight-card">
+            <div class="scaling-badge badge-emerald">LLaMA 3 Modern</div>
+            <h3 class="scaling-title">Base $\theta_{\text{base}} = 500,000$ (128k Context)</h3>
+            <p class="scaling-desc">
+              By increasing the base frequency by 50x, rotation angles advance 50x slower per token step. 
+              128,000 tokens now comfortably fit into the learned angular space!
+            </p>
+            <div class="canvas-mini-wrapper">
+              <canvas id="canvas-base-500k" width="280" height="280" aria-label="RoPE Base 500k"></canvas>
+            </div>
+            <div class="scaling-stat">
+              <span>Full Rotations at pos 32k:</span>
+              <strong class="text-emerald">~0.10 Circles (Stable)</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Educational Deep Dive & References -->
+    <section id="insights" class="section-block">
+      <div class="container">
+        <div class="panel-card deep-dive-panel">
+          <div class="deep-dive-badge">📚 Architectural Evolution &amp; Research Citations</div>
+          <h2 class="deep-dive-title">The Evolution of Positional Representations</h2>
+          
+          <div class="deep-dive-content">
+            <p>
+              In original recurrent neural networks (RNNs), sequential order was inherently preserved by step-by-step state propagation. 
+              When Vaswani et al. introduced the Transformer, computation became 100% parallel, but lost all temporal sequence. 
+              Positional encodings restored this capability without sacrificing parallelization speed.
+            </p>
+          </div>
+
+          <div class="classic-papers-grid">
+            <div class="paper-citation">
+              <strong>"Attention Is All You Need" (2017)</strong>
+              <p>Ashish Vaswani, Noam Shazeer et al. (Introduced Sinusoidal Positional Encoding).</p>
+            </div>
+            <div class="paper-citation">
+              <strong>"RoFormer: Enhanced Transformer with Rotary Position Embedding" (2021)</strong>
+              <p>Jianlin Su, Yu Lu, Shengfeng Pan, Bo Wen, Yunfeng Liu (Invented RoPE).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="container footer-content">
+      <p>
+        Interactive Positional Encodings Lab. Zero backend required &mdash; runs 100% client-side for GitHub Pages.
+      </p>
+      <div class="footer-links">
+        <a href="https://github.com/martianunlimited/llm_positional" target="_blank" rel="noopener">GitHub Repository</a>
+        <span>•</span>
+        <a href="https://martianunlimited.github.io/llm_tokenizer/" target="_blank" rel="noopener">🔤 Tokenizer Demo</a>
+        <span>•</span>
+        <a href="https://martianunlimited.github.io/llm_embedding/" target="_blank" rel="noopener">🧭 Embeddings Demo</a>
+        <span>•</span>
+        <a href="https://martianunlimited.github.io/llm_attention/" target="_blank" rel="noopener">🎯 Attention Demo</a>
+        <span>•</span>
+        <a href="https://martianunlimited.github.io/llm_sampling/" target="_blank" rel="noopener">🎲 Sampling Demo</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

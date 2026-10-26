@@ -1,0 +1,119 @@
+"""Preset educational scenarios for LLM Positional Encodings Lab."""
+
+import json
+from pathlib import Path
+
+from src.config import settings
+from src.schemas import PositionalPreset
+
+PRESETS: list[PositionalPreset] = [
+    PositionalPreset(
+        id="dog-man-permutation",
+        title="The Bag-of-Words Dilemma: Dog Bites Man",
+        category="Permutation Dilemma",
+        description="Demonstrating why Transformers cannot discern word order without PE.",
+        explanation=(
+            "Standard self-attention computes dot products between content embeddings. "
+            "Because dot product addition is commutative and permutation invariant, the sentences "
+            "'Dog bites man' and 'Man bites dog' produce mathematically identical representations. "
+            "Without positional encoding, the model cannot know who bit whom!"
+        ),
+        sentence_a="Dog bites man",
+        sentence_b="Man bites dog",
+        default_dim=16,
+        default_base=10000.0,
+        key_observations=[
+            "Without PE, attention matrices between identical words are permutation-symmetric",
+            "Syntactic subject and direct object roles are completely erased",
+            "Positional encoding breaks symmetry by adding or rotating coordinates by word index",
+        ],
+    ),
+    PositionalPreset(
+        id="sinusoidal-clock",
+        title="The Vaswani Clock: Multi-Frequency Harmonic Waves",
+        category="Sinusoidal Waves",
+        description="The original 2017 Transformer architecture: Seconds, Minutes, and Hours.",
+        explanation=(
+            "Vaswani et al. (2017) designed continuous sine and cosine waves across dimensions. "
+            "Low dimensions alternate rapidly like a second hand (tracking adjacent word syntax), "
+            "while high dimensions oscillate slowly like an hour hand (tracking long-distance "
+            "document structure). This enables the model to attend to relative positions via "
+            "trigonometric angle-sum identities: cos(a - b) = cos(a)cos(b) + sin(a)sin(b)."
+        ),
+        sentence_a="Attention Is All You Need",
+        sentence_b=None,
+        default_dim=16,
+        default_base=10000.0,
+        key_observations=[
+            "Dimension 0 has period 2*pi (~6.28 tokens), completing cycles rapidly",
+            "Dimension d-1 has period 2*pi*10000 (~62,831 tokens), varying smoothly",
+            "Vector addition allows linear projection layers to compute relative offsets",
+        ],
+    ),
+    PositionalPreset(
+        id="rope-unit-circle",
+        title="Modern Rotary Position Embeddings (RoPE)",
+        category="Rotary Embedding (RoPE)",
+        description="How LLaMA, Mistral, and modern LLMs rotate vectors in 2D complex planes.",
+        explanation=(
+            "Rather than adding static vectors (which can corrupt semantic magnitude), RoPE "
+            "(Su et al., 2021) treats each pair of vector dimensions as a 2D complex plane and "
+            "multiplies them by a rotation matrix R_m. Because rotations preserve vector lengths "
+            "(||R_m q|| = ||q||), the inner product between Query at pos m and Key at pos n "
+            "depends strictly on the relative angle delta = (m - n) * theta."
+        ),
+        sentence_a="The quick brown fox jumps over the lazy dog",
+        sentence_b=None,
+        default_dim=16,
+        default_base=10000.0,
+        key_observations=[
+            "RoPE preserves exact vector magnitudes (norm-preserving rotation)",
+            "Inner product <R_m q, R_n k> = q^T R_{m-n} k depends purely on relative distance",
+            "Natural recency decay: distant words rotate to near-orthogonal angles",
+        ],
+    ),
+    PositionalPreset(
+        id="llama3-long-context",
+        title="LLaMA 3 Context Window Scaling: Base 10,000 vs 500,000",
+        category="Long-Context Extrapolation",
+        description="How increasing the RoPE frequency base unlocks 128k context windows.",
+        explanation=(
+            "When an LLM trained on 4k tokens encounters position 32k or 128k, high rotation "
+            "frequencies wrap around the unit circle multiple times, causing catastrophic "
+            "out-of-distribution confusion. Increasing the RoPE base from theta_base = "
+            "10,000 (LLaMA 1/2) to 500,000 (LLaMA 3) or 1,000,000 (LLaMA 3.1) slows angular "
+            "speed, compressing 128,000 tokens into the same angular span!"
+        ),
+        sentence_a="The long document begins here and continues for 128k tokens",
+        sentence_b=None,
+        default_dim=16,
+        default_base=500000.0,
+        key_observations=[
+            "Base 10,000 wraps around quickly, confusing positions > 4096",
+            "Base 500,000 slows angular speed by ~50x, accommodating 128,000 tokens",
+            "No retraining of core semantic weights required—only position frequency adjustment",
+        ],
+    ),
+]
+
+
+def get_all_presets() -> list[PositionalPreset]:
+    """Retrieve all positional presets."""
+    return PRESETS
+
+
+def get_preset_by_id(preset_id: str) -> PositionalPreset | None:
+    """Retrieve a single preset by ID."""
+    for p in PRESETS:
+        if p.id == preset_id:
+            return p
+    return None
+
+
+def export_presets_json(output_path: Path | None = None) -> Path:
+    """Export presets to JSON for frontend web application."""
+    target_path = output_path or settings.presets_file
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(target_path, "w", encoding="utf-8") as f:
+        json.dump([p.model_dump() for p in PRESETS], f, indent=2)
+    return target_path
